@@ -1,0 +1,48 @@
+# Byte-compiled / optimized / compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+eggs/
+*.egg
+*.egg-info/
+.DS_Store # macOS specific
+
+# Environments
+.env
+venv/
+env/
+# For virtualenvwrapper
+.project
+.venv
+
+# Editors and IDEs
+# VS Code
+.vscode/
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+# PyCharm
+.idea/
+# Spyder
+.spyproject/
+
+# Testing
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Miscellaneous
+*.log
+*.sqlite3
+*.db
