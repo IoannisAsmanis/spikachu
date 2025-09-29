@@ -1,0 +1,3 @@
+[submodule "poyo"]
+	path = poyo
+	url = https://github.com/neuro-galaxy/poyo.git

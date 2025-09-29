@@ -1,0 +1,165 @@
+experiment_tag: 'comparable_baselines'
+
+seed: 42
+wandb_mode: 'disabled'
+
+
+### SLURM_IDs for full runs ###
+# single subject, no homogenizer
+# MLP: 55032 (rewrote the memory function!!!)
+# Bidirectional GRU: 54570 (SHOULD NOT BE INCLUDED ANYWHERE)
+# RNN: 
+# GRU: 54584 (bsz 96), 59221 (bsz 128)
+
+# single subject, with homogenizer
+# MLP: 55972 & 55982 (57267 due to pre-emption) for array_id 4
+# RNN: 57268 (no convergence)
+# GRU: 55370 (bsz 96), 59195 (bsz 128)
+# LSTM: 60638 (did not complete???), 60701
+
+### SLURM IDs for MAZE ###
+# no homogenizer
+# GRU: 86693
+# MLP: 88832
+#
+# with homogenizer
+# MLP: 60637
+# GRU: 60636, 61035 (re-ran for more epochs)
+# LSTM: 61014
+
+
+### SLURM IDs for RTT ###
+# no homogenizer
+# GRU: 86701, also 89287 just to be sure
+# MLP: 88833
+# LSTM: 
+
+# with homogenizer
+# GRU: 99485
+# MLP: 
+# LSTM: 
+
+
+### SLURM IDs for TEST SET ###
+# with homogenizer - original
+# GRU: 72868 # single session per array id (ID1)
+# MLP: 75758 # single session per array id (ID1) (bsz 64, n_epochs 501)
+# LSTM: 78481 # single session per array id (ID1)
+# with homogenizer - monkey T
+# GRU: 75600 # single session per array id (ID2)
+# MLP: 76464 # single session per array id (ID2) (bsz 96, n_epochs 751)
+# LSTM: 78489 # single session per array id (ID2)
+
+# no homogenizer - original
+# GRU: 83914 # single session per array id (ID1)
+# MLP: 84632 # single session per array id (ID1)
+# LSTM: 85056 # single session per array id (ID1)
+# no homogenizer - monkey T
+# GRU: 84412 # single session per array id (ID2)
+# MLP: 84623 # single session per array id (ID2)
+# LSTM: 85060 # single session per array id (ID2)
+
+model:
+  # slurm run ids, if 2 first is single dir, second is bidirectional
+  type: gru # mlp (52250), rnn (52319), gru (52329, 52368), lstm (52340, 52349)
+  enable_benchmarking: True
+
+  setup:
+    pre_trained_path: ~
+    input_size: 100
+    output_size: 2
+    memory: 10 # only used with MLP
+
+    mlp_cfg:
+      _target_: models.baselines.ConfigurableMLP
+      dims: ["${model.setup.input_size}",256,512,1024,1024,512,256,"${model.setup.output_size}"]
+      p_drop: 0.1
+      nonlinearity: ReLU
+    
+    rnn_cfg:
+      _target_: models.baselines.ConfigurableRecurrentModel
+      n_blocks: 4
+      block_cfg:
+        rec_type: RNN
+        input_dim: ${model.setup.input_size}
+        hidden_dim: 212
+        n_rec_layers: 8
+        output_dim: ${model.setup.output_size}
+        p_drop: 0.1
+        bidirectional: False
+    
+    gru_cfg:
+      _target_: models.baselines.ConfigurableRecurrentModel
+      n_blocks: 4
+      block_cfg:
+        rec_type: GRU
+        input_dim: ${model.setup.input_size}
+        hidden_dim: 164
+        n_rec_layers: 4
+        output_dim: ${model.setup.output_size}
+        p_drop: 0.1
+        bidirectional: False
+    
+    lstm_cfg:
+      _target_: models.baselines.ConfigurableRecurrentModel
+      n_blocks: 4
+      block_cfg:
+        rec_type: LSTM
+        input_dim: ${model.setup.input_size}
+        hidden_dim: 162
+        n_rec_layers: 4
+        output_dim: ${model.setup.output_size}
+        p_drop: 0.1
+        bidirectional: False
+
+    # CausalHomogenizer:
+    #   num_latents: 128
+    #   latent_dim: 32
+    #   input_dim: 32
+    #   qk_out_dim: ~
+    #   v_out_dim: ~
+    #   num_cross_attn_heads: 1
+    #   cross_attn_widening_factor: 4
+    #   use_query_residual: True
+    #   cross_attn_lin_dropout: 0.3
+    #   cross_attention_dropout: 0.1
+    #   num_virtual_channels: ${model.setup.input_size}
+tokenizer:
+  latent_step: 0.01
+  num_latents_per_step: 1
+  use_memory_efficient_attn: False
+dropout:
+  min_units: 30
+  mode_units: 100
+  max_units: 300
+  peak: 4
+  M: 10
+  max_attempts: 100
+sampler:
+  max_time: 1.0 # CHANGE FOR RTT 0.6
+  window_length: 1 # CHANGE FOR RTT 0.599
+  batch_size: 128 # RERUN EVERYTHING WITH CONSISTENT BATCH SIZE
+train:
+  num_epochs: 1001
+  lr: 0.002
+  weight_decay: 0.0001
+data:
+  ## ORIGINAL
+  data_path: '/mnt/kostas-graid/datasets/ioannis/bio_spikes/all_h5_files/'
+  dandiset: '000688'
+  lock_data_idcs: ~
+
+  # data_path: '/mnt/kostas-graid/datasets/ioannis/bio_spikes/other_datasets/monkey_T/h5_files/'
+  # dandiset: '000688'
+  # lock_data_idcs: ~
+  
+  ## MC MAZE (second line is with subsampling)
+  # data_path: '/mnt/kostas-graid/datasets/ioannis/bio_spikes/other_datasets/mc_maze/all_h5_files/'
+  # data_path: '/mnt/kostas-graid/datasets/ioannis/bio_spikes/other_datasets/mc_maze/subsampled_h5_files/'
+  # dandiset: '000128'
+  # lock_data_idcs: [0]
+
+  ## MC RTT
+  # data_path: '/mnt/kostas-graid/datasets/ioannis/bio_spikes/other_datasets/mc_rtt/all_h5_files/'
+  # dandiset: '000129'
+save_path: "trained_models/"

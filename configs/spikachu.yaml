@@ -1,0 +1,117 @@
+experiment_tag: 'SpikingJelly_snn'
+
+seed: 42
+wandb_mode: 'disabled'
+model:
+  type: "SpikingJellySNN"
+  enable_benchmarking: True
+  setup:
+    surrogate: 'atan'  # 'atan' or 'sigmoid'
+    sparsity_loss_weight: 0.0 # 0.00001 # TUNE THIS
+    sparsity_loss: 'l2'  # 'l1' or 'l2' TUNE THIS
+    backend: 'cupy'  # 'cupy' or 'torch'
+    input_size: 128
+    pre_trained_path: ~
+    finetune_with_unit_identification: False
+    multi_scale_snn:
+      list_of_taus_ms: [1.1, 10.0, 20.0]
+      v_threshold: 0.75
+      v_reset: 0.
+      input_size: ${model.setup.input_size}
+      hidden_size: 256
+      output_size: 256
+      n_layers: 4
+      skip_step: 2
+      p_drop: 0.1
+
+    SSA:
+      n_blocks: 1
+      input_dim: 256 # ${model.setup.input_size}  # ${model.setup.multi_scale_snn.output_size}  # ${model.setup.feed_forward.output_size}
+      qk_out_dim: 512
+      v_out_dim: 512
+      output_dim: ${model.setup.SSA.input_dim}
+      head_dim: 64
+      mlp_ratio: 4.
+      qkv_bias: True
+      qk_scale: ~
+      lin_drop: 0.1
+      attn_drop: 0.1
+
+    feed_forward:
+     tau: 2.
+     v_threshold: 0.75
+     v_reset: 0.
+     input_size: 768
+     hidden_size: ~
+     output_size: 384
+     n_layers: 1
+     skip_step: ~
+     p_drop: ~
+
+    integrator:
+     list_of_taus: [1.111, 10.0]
+     v_threshold: 0.75
+     v_reset: 0.
+     input_size: 384
+     hidden_size: 384
+     output_size: 384
+     n_layers: 4
+     skip_step: 2
+     p_drop: 0.1
+
+    output_tau: 2.
+    pre_output_size: 768
+    output_size: 2
+
+    CausalHomogenizer:
+      num_latents: 128
+      latent_dim: 32
+      input_dim: 32
+      qk_out_dim: ~
+      v_out_dim: ~
+      num_cross_attn_heads: 1
+      cross_attn_widening_factor: 4
+      use_query_residual: True
+      cross_attn_lin_dropout: 0.3
+      cross_attention_dropout: 0.1
+      num_virtual_channels: ${model.setup.input_size}
+
+tokenizer:
+  latent_step: 0.01
+  num_latents_per_step: 1
+  use_memory_efficient_attn: False
+dropout:
+  min_units: 30
+  mode_units: 100
+  max_units: 300
+  peak: 4
+  M: 10
+  max_attempts: 100
+sampler:
+  max_time: 1.0 # 0.6 for RTT
+  window_length: 1.0 # 0.599 for RTT
+  batch_size: 64
+train:
+  num_epochs: 1001
+  lr: 0.001
+  weight_decay: 0.0001
+data:
+  data_path: '/mnt/kostas-graid/datasets/ioannis/bio_spikes/all_h5_files/'
+  dandiset: '000688'
+  lock_data_idcs: [] # add integers to use only specific recordings for testing
+
+  # data_path: '/mnt/kostas-graid/datasets/ioannis/bio_spikes/other_datasets/monkey_T/h5_files/'
+  # dandiset: '000688'
+  # lock_data_idcs: []
+
+  ## MC MAZE
+  # data_path: '/mnt/kostas-graid/datasets/ioannis/bio_spikes/other_datasets/mc_maze/subsampled_h5_files/'
+  # dandiset: '000128'
+  # lock_data_idcs: []
+
+  ## MC RTT
+  # data_path: '/mnt/kostas-graid/datasets/ioannis/bio_spikes/other_datasets/mc_rtt/rescaled_h5_files/'
+  # dandiset: '000129'
+  # lock_data_idcs: []
+
+save_path: "trained_models/"
