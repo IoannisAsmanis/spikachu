@@ -1,3 +1,7 @@
+import sys
+
+sys.path.append("poyo/")
+
 import argparse
 from torch.utils.data import DataLoader, SequentialSampler, Sampler, RandomSampler
 import torch
@@ -57,9 +61,9 @@ SLURM_CTX = {
 CWD_PROXY = ""  # os.getcwd() # leave empty on cluster
 
 
-def main(data_idcs, uid, device):
+def main(checkpoint_path, data_idcs, uid, cfg_path, device, cfg_override=None):
 
-    with open("./configs/multisubject_root_config.yaml") as f:
+    with open(cfg_path) as f:
         config_dict = yaml.safe_load(f)
         base_config = OmegaConf.create(config_dict)
 
@@ -72,7 +76,7 @@ def main(data_idcs, uid, device):
             )
             if ".h5" == x[-3:]
         ]
-    )  # '/../bio_spikes/processed/000688'
+    )
     num_electrodes = pd.read_csv(
         curr_dir
         + base_config.data.data_path
@@ -107,7 +111,7 @@ def main(data_idcs, uid, device):
     # %% Initialize models
     wandb.login()
     with wandb.init(
-        project="poyo",
+        project="spikachu",
         name=base_config.model.type
         + "_"
         + "_AND_".join([x for x in base_config.data.session]),
@@ -139,7 +143,7 @@ def main(data_idcs, uid, device):
 
         model.load_state_dict(
             torch.load(
-                cfg.save_path,  # "/home/gment/poyo/trained_models/multi-subject_no_SSA/SpikingJellySNN_2_5_11_19_23_27_30_34_38_41_50_53_57_60_64_70_72_80_85_96_2025-03-29.pt",
+                checkpoint_path,
                 weights_only=False,
                 map_location=device,
             )
@@ -301,24 +305,33 @@ def main(data_idcs, uid, device):
     #     cfg.save_path + f'{cfg.model.type}_MS_{date.today()}.pt'
     # )
 
-    # results_dir = os.path.join(cfg.save_path, "results")
-    # if not os.path.exists(results_dir):
-    #     os.makedirs(results_dir)
-    # results_r2.to_csv(
-    #     os.path.join(results_dir, f"{cfg.model.type}_results_r2_{uid}.csv")
-    # )
-    # results_mse.to_csv(
-    #     os.path.join(results_dir, f"{cfg.model.type}_results_mse_{uid}.csv")
-    # )
-    # results_sign.to_csv(
-    #     os.path.join(results_dir, f"{cfg.model.type}_results_sign_{uid}.csv")
-    # )
+    results_dir = os.path.join(cfg.save_path, "test_results")
+    if not os.path.exists(results_dir):
+        os.makedirs(results_dir)
+    results_r2.to_csv(
+        os.path.join(results_dir, f"{cfg.model.type}_results_r2_{uid}.csv")
+    )
+    results_mse.to_csv(
+        os.path.join(results_dir, f"{cfg.model.type}_results_mse_{uid}.csv")
+    )
+    results_sign.to_csv(
+        os.path.join(results_dir, f"{cfg.model.type}_results_sign_{uid}.csv")
+    )
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train POYO model")
+    parser = argparse.ArgumentParser(description="Spikachu testing script")
     parser.add_argument(
         "--no_slurm", action="store_true", help="Disable SLURM execution context"
+    )
+    parser.add_argument(
+        "--checkpoint_path", type=str, default="", help="Path to model weights to load"
+    )
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="configs/spikachu.yaml",
+        help="Path to the config file",
     )
     args = parser.parse_args()
 
@@ -328,60 +341,26 @@ if __name__ == "__main__":
     else:
         torch.set_num_threads(torch.get_num_threads())
 
+    # use no-slurm to debug locally
     if args.no_slurm:
-        # mp.set_start_method("spawn")
-
-        # Create a list of dataset indices and shuffle them randomly
-        # num_datasets, num_processes = 99, 3
-        # all_indices = list(range(num_datasets))
-        # random.shuffle(all_indices)
-        #
-        # # Split the shuffled indices into approximately equal groups
-        # data_idcs = [
-        #     all_indices[
-        #         i * (num_datasets // num_processes)
-        #         + min(i, num_datasets % num_processes) : (i + 1)
-        #         * (num_datasets // num_processes)
-        #         + min(i + 1, num_datasets % num_processes)
-        #     ]
-        #     for i in range(num_processes)
-        # ]
-
-        # Keep only 3 datasets, one from each monkey
-        # num_processes = 10
-        # data_idcs = [[30, 40, 50, 62, 64, 70, 94, 95, 96]]
-
-        data_idcs = [[23]]  # [[30], [42]]  # [[i] for i in range(99)]
-        # data_idcs = [[2],[5],[8],[11],[15],[19],[23],[27],[30],[34],[38],[41],[45],[50],[53],[57],[60],[64],[70],[72],[76],[80],[85],[90],[96]]  # 8, 15, 45, 76, 90
-        # data_idcs = [[70]]
-
-        groups = [(data_idcs[i], i, device) for i in range(len(data_idcs))]
-
-        # # Train the models on each dataset in parallel (as long as memory doesn't crash).
-        # # res = main([0], 0, torch.device('cuda'))
-        # with mp.Pool(processes=num_processes) as pool:
-        #     # Use starmap_async and capture the result object
-        #     async_results = pool.starmap_async(main, groups)
-        #
-        #     # Call .get() to ensure the main process waits for all async processes to finish
-        #     async_results.get()
+        data_idcs = [[23]]  # test on specific sessions
+        groups = [
+            (args.checkpoint_path, data_idcs[i], i, args.config, device)
+            for i in range(len(data_idcs))
+        ]
         for group in groups:
             main(*group)
     else:
         print(SLURM_CTX, flush=True)
-
-        # N_FILES_TOTAL = 9
-        # single_node_width = 1
         uid = int(SLURM_CTX["task_id"])
-        print(uid)
-        # data_idcs = np.arange(
-        #     uid * single_node_width,
-        #     min((uid + 1) * single_node_width, N_FILES_TOTAL),
-        # )
-        # all_idcs = [[30], [40], [50], [62], [64], [70], [94], [95], [96]]
-        all_idcs = [[30], [40]]
-
-        data_idcs = all_idcs[uid]
+        if args.multi_subject:
+            assert uid == 0, "Multi-subject only supports single task (uid=0)"
+            all_idcs = [[x for x in range(99)]]  # | 99 session model
+            print("Generating multisubject model with idcs: ", all_idcs)
+            data_idcs = all_idcs[uid]
+        else:
+            all_idcs = [[x] for x in range(99)]  # [30, 40, 50, 62, 64, 70, 94, 95, 96]]
+            data_idcs = all_idcs[uid * 10 : (uid + 1) * 10]  # all_idcs[uid]
 
         print(f"Data indices: {data_idcs}", flush=True)
         print(f"UID: {uid}", flush=True)
@@ -390,4 +369,5 @@ if __name__ == "__main__":
             flush=True,
         )
 
-        main(data_idcs, uid, device)
+        for di in data_idcs:
+            main(args.checkpoint_path, di, uid, args.config, device)

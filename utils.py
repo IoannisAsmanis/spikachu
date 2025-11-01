@@ -108,7 +108,10 @@ def evaluate(
 
                 if not subgroups:
                     # subgroups = [is_within_trial]
-                    subgroups = [is_within_trial[i:i+100] for i in range(0, len(is_within_trial), 100)]
+                    subgroups = [
+                        is_within_trial[i : i + 100]
+                        for i in range(0, len(is_within_trial), 100)
+                    ]
 
                 # Determine subplot grid dimensions
                 # num_subgroups = len(subgroups)
@@ -130,15 +133,44 @@ def evaluate(
                     pred_ = predicted_values[subgroup].detach().cpu().numpy()
                     # discontinuities = np.where(np.abs(np.diff(true_, axis=0)) > 0.1)[0]
 
-                    fig, ax = plt.subplots(2, 1, figsize=(6.4, 3.2), sharex=True, dpi=300)
+                    fig, ax = plt.subplots(
+                        2, 1, figsize=(6.4, 3.2), sharex=True, dpi=300
+                    )
                     axes = ax.flatten()
                     # subgroup_points = predicted_values[subgroup]  # Extract points in this subgroup
 
-                    ax[0].plot([x/100 for x in range(len(true_[:, 0]))], true_[:, 0], 'k', label='Ground Truth', linewidth=2.5)
-                    ax[1].plot([x/100 for x in range(len(true_[:, 0]))], true_[:, 1], 'k', linewidth=2.5)
-                    ax[0].plot([x/100 for x in range(len(true_[:, 0]))], pred_[:, 0], 'teal', alpha=0.7, label='Spikachu', linewidth=2.5)
-                    ax[1].plot([x/100 for x in range(len(true_[:, 0]))], pred_[:, 1], 'teal', alpha=0.7, linewidth=2.5)
-                    plt.suptitle(f"Batch: {i} | R2: {max(0, r2_score(true_, pred_)):.2f}", fontsize=6)
+                    ax[0].plot(
+                        [x / 100 for x in range(len(true_[:, 0]))],
+                        true_[:, 0],
+                        "k",
+                        label="Ground Truth",
+                        linewidth=2.5,
+                    )
+                    ax[1].plot(
+                        [x / 100 for x in range(len(true_[:, 0]))],
+                        true_[:, 1],
+                        "k",
+                        linewidth=2.5,
+                    )
+                    ax[0].plot(
+                        [x / 100 for x in range(len(true_[:, 0]))],
+                        pred_[:, 0],
+                        "teal",
+                        alpha=0.7,
+                        label="Spikachu",
+                        linewidth=2.5,
+                    )
+                    ax[1].plot(
+                        [x / 100 for x in range(len(true_[:, 0]))],
+                        pred_[:, 1],
+                        "teal",
+                        alpha=0.7,
+                        linewidth=2.5,
+                    )
+                    plt.suptitle(
+                        f"Batch: {i} | R2: {max(0, r2_score(true_, pred_)):.2f}",
+                        fontsize=6,
+                    )
                     # ax.set_title(f"Batch: {i} | R2: {max(0, r2_score(true_, pred_)):.2f}", fontsize=6)
                     ax[1].set_xlabel("Time (sec)")
                     ax[0].set_ylabel("$v_{x}$", fontsize=14)
@@ -150,22 +182,20 @@ def evaluate(
                     #     ax.axis("off")
 
                     for ax_ in ax:
-                        
-                        ax_.spines['top'].set_visible(False)
-                        ax_.spines['right'].set_visible(False)
-                        ax_.spines['bottom'].set_visible(False)
-                        ax_.spines['left'].set_visible(True)
-                        ax_.yaxis.set_ticks_position('left')
-                        ax_.yaxis.set_major_locator(MultipleLocator(1))
-                        ax_.tick_params(axis='y', labelsize=14)
-                        ax_.patch.set_alpha(0)
-                        ax_.tick_params(axis='y', labelsize=14)
-                        ax_.yaxis.set_major_locator(MultipleLocator(1))
-                        ax_.tick_params(axis='x', labelsize=14)
-                        ax_.tick_params(axis='y', labelsize=14)
-                    
 
-                    
+                        ax_.spines["top"].set_visible(False)
+                        ax_.spines["right"].set_visible(False)
+                        ax_.spines["bottom"].set_visible(False)
+                        ax_.spines["left"].set_visible(True)
+                        ax_.yaxis.set_ticks_position("left")
+                        ax_.yaxis.set_major_locator(MultipleLocator(1))
+                        ax_.tick_params(axis="y", labelsize=14)
+                        ax_.patch.set_alpha(0)
+                        ax_.tick_params(axis="y", labelsize=14)
+                        ax_.yaxis.set_major_locator(MultipleLocator(1))
+                        ax_.tick_params(axis="x", labelsize=14)
+                        ax_.tick_params(axis="y", labelsize=14)
+
                     # for ax_ in ax:
                     #     ax_.spines['top'].set_visible(False)
                     #     ax_.spines['right'].set_visible(False)
@@ -176,21 +206,28 @@ def evaluate(
                     #     ax_.yaxis.set_ticks_position('left')  # only left ticks
                     #     ax_.yaxis.set_tick_params(width=1)
 
-
                     ax[0].xaxis.set_visible(False)  # hide x-axis line
-                    ax[0].tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+                    ax[0].tick_params(
+                        axis="x",
+                        which="both",
+                        bottom=False,
+                        top=False,
+                        labelbottom=False,
+                    )
                     # ax[0].legend()
 
-                    ax[1].spines['bottom'].set_visible(True)
-                    ax[1].tick_params(axis='x', labelsize=14)
+                    ax[1].spines["bottom"].set_visible(True)
+                    ax[1].tick_params(axis="x", labelsize=14)
 
                     plt.xticks(fontsize=14)
-                    plt.yticks(fontsize=14)      
+                    plt.yticks(fontsize=14)
                     plt.subplots_adjust(hspace=0.1)
                     fig.patch.set_alpha(0)
-                    
-                    os.makedirs('vis_logs', exist_ok=True)
-                    fig.savefig(f"vis_logs/{session_id}_{split}_batch_{i}_subgroup_{ii}_r2_score_{100*np.round(r2_score(true_, pred_), 2)}.png")
+
+                    os.makedirs("vis_logs", exist_ok=True)
+                    fig.savefig(
+                        f"vis_logs/{session_id}_{split}_batch_{i}_subgroup_{ii}_r2_score_{100*np.round(r2_score(true_, pred_), 2)}.png"
+                    )
                     plt.close(fig)
 
                 # # Set up subplots
@@ -502,6 +539,8 @@ def train(
                             + f"POYO_{session_tag}_{date.today()}.pt"
                         )
                         print(f"[train - try] Saving weights to {path_to_write}")
+                        if not os.path.exists(Path(path_to_write).parent):
+                            os.makedirs(Path(path_to_write).parent, exist_ok=True)
                         torch.save(best_weights, path_to_write)
                     except:
                         path_to_write = (
@@ -594,13 +633,13 @@ def train(
             scheduler.step()
         # scheduler.step()
 
-    if hasattr(net, "get_spike_params"):
-        # TODO: save the spiking parameters to an appropriate file!
-        spike_param_path = "spike_params_logical_init.pkl"
-        with open(spike_param_path, "wb") as fout:
-            # list of tuples of arrays, each list element (ffn_sp, ms_sp, int_sp)
-            # length of list is equal to number of epochs
-            pickle.dump(spike_params, fout)
+    ## Uncomment to save spiking params
+    # if hasattr(net, "get_spike_params"):
+    #     spike_param_path = "spike_params_logical_init.pkl"
+    #     with open(spike_param_path, "wb") as fout:
+    #         # list of tuples of arrays, each list element (ffn_sp, ms_sp, int_sp)
+    #         # length of list is equal to number of epochs
+    #         pickle.dump(spike_params, fout)
 
     net.load_state_dict(best_weights)  # Returns the weights of the best network
     return net

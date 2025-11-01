@@ -526,6 +526,8 @@ class model_wrapper(nn.Module):
         input_mask = rearrange(input_mask, "b t c -> (b t) c")
         # input_mask = input_mask.unsqueeze(1)
 
+        self.to(inputs.device)
+
         inputs = self.unit_emb(inputs)
 
         latent_index = rearrange(

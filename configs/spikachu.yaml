@@ -7,8 +7,8 @@ model:
   enable_benchmarking: True
   setup:
     surrogate: 'atan'  # 'atan' or 'sigmoid'
-    sparsity_loss_weight: 0.0 # 0.00001 # TUNE THIS
-    sparsity_loss: 'l2'  # 'l1' or 'l2' TUNE THIS
+    sparsity_loss_weight: 0.0 # 0.0 disables sparsity loss
+    sparsity_loss: 'l2'  # 'l1' or 'l2'
     backend: 'cupy'  # 'cupy' or 'torch'
     input_size: 128
     pre_trained_path: ~
@@ -92,26 +92,26 @@ sampler:
   window_length: 1.0 # 0.599 for RTT
   batch_size: 64
 train:
-  num_epochs: 1001
+  num_epochs: 1
   lr: 0.001
   weight_decay: 0.0001
 data:
   data_path: '/mnt/kostas-graid/datasets/ioannis/bio_spikes/all_h5_files/'
   dandiset: '000688'
-  lock_data_idcs: [] # add integers to use only specific recordings for testing
+  lock_data_idcs: ~ # add integers to use only specific recordings for testing
 
   # data_path: '/mnt/kostas-graid/datasets/ioannis/bio_spikes/other_datasets/monkey_T/h5_files/'
   # dandiset: '000688'
-  # lock_data_idcs: []
+  # lock_data_idcs: ~
 
   ## MC MAZE
   # data_path: '/mnt/kostas-graid/datasets/ioannis/bio_spikes/other_datasets/mc_maze/subsampled_h5_files/'
   # dandiset: '000128'
-  # lock_data_idcs: []
+  # lock_data_idcs: ~
 
   ## MC RTT
   # data_path: '/mnt/kostas-graid/datasets/ioannis/bio_spikes/other_datasets/mc_rtt/rescaled_h5_files/'
   # dandiset: '000129'
-  # lock_data_idcs: []
+  # lock_data_idcs: ~
 
 save_path: "trained_models/"

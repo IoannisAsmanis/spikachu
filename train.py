@@ -83,7 +83,7 @@ def main(data_idcs, uid, cfg_path, device, cfg_override=None):
             )
             if ".h5" == x[-3:]
         ]
-    )  # '/../bio_spikes/processed/000688'
+    )
     num_electrodes = pd.read_csv(
         curr_dir
         + base_config.data.data_path
@@ -121,11 +121,9 @@ def main(data_idcs, uid, cfg_path, device, cfg_override=None):
     # session_cfg = base_config
     base_config.data.session = datasets  # session_id
     seed_everything(base_config.seed)
-
-    # %% Initialize models
     wandb.login()
     with wandb.init(
-        project="poyo",
+        project="spikachu",
         name=base_config.model.type
         + "_"
         + "_AND_".join([x for x in base_config.data.session]),
@@ -316,9 +314,7 @@ def main(data_idcs, uid, cfg_path, device, cfg_override=None):
         )
 
         optimizer = optim.Lamb(
-            filter(
-                lambda p: p.requires_grad, model.parameters()
-            ),  # model.parameters(),
+            filter(lambda p: p.requires_grad, model.parameters()),
             lr=cfg.train.lr,
             weight_decay=cfg.train.weight_decay,
             eps=1e-8,
@@ -328,16 +324,6 @@ def main(data_idcs, uid, cfg_path, device, cfg_override=None):
             optimizer, T_max=int(0.25 * cfg.train.num_epochs), eta_min=0
         )
 
-        # scheduler = OneCycleLR(
-        #     optimizer,
-        #     max_lr=cfg.train.lr,
-        #     total_steps=cfg.train.num_epochs,
-        #     pct_start=0.05
-        #
-        # )
-
-        # %% Train the model & Save the results
-        # try:
         trained_net = train(
             model,
             train_loader,
@@ -370,12 +356,6 @@ def main(data_idcs, uid, cfg_path, device, cfg_override=None):
         #     results_sign,
         #     plot_data=True,
         # )
-
-        # except Exception as error:
-        #     print(f"Failed to train session {session_id}: {error}")
-        #     results.loc[session_id, ["valid_R2_x", "valid_R2_y"]] = np.array(
-        #         [-1, -1]
-        #     )
 
     # results_dir = os.path.join(cfg.save_path, "results")
     # if not os.path.exists(results_dir):
@@ -450,7 +430,7 @@ def multi_setting_manager(data_idcs, uid, cfg_path, device):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train POYO model")
+    parser = argparse.ArgumentParser(description="Spikachu training script")
     parser.add_argument(
         "--no_slurm", action="store_true", help="Disable SLURM execution context"
     )
@@ -471,66 +451,23 @@ if __name__ == "__main__":
     else:
         torch.set_num_threads(torch.get_num_threads())
 
+    # use no-slurm to debug locally
     if args.no_slurm:
-        # mp.set_start_method("spawn")
-
-        # Create a list of dataset indices and shuffle them randomly
-        # num_datasets, num_processes = 99, 3
-        # all_indices = list(range(num_datasets))
-        # random.shuffle(all_indices)
-        #
-        # # Split the shuffled indices into approximately equal groups
-        # data_idcs = [
-        #     all_indices[
-        #         i * (num_datasets // num_processes)
-        #         + min(i, num_datasets % num_processes) : (i + 1)
-        #         * (num_datasets // num_processes)
-        #         + min(i + 1, num_datasets % num_processes)
-        #     ]
-        #     for i in range(num_processes)
-        # ]
-
-        # Keep only 3 datasets, one from each monkey
-        # num_processes = 10
-        # data_idcs = [[30, 40, 50, 62, 64, 70, 94, 95, 96]]
-
-        # c_20150313_center_out_reaching
-        data_idcs = [[23]]
-
+        data_idcs = [[23]]  # train on specific sessions
         groups = [(data_idcs[i], i, args.config, device) for i in range(len(data_idcs))]
-
-        # # Train the models on each dataset in parallel (as long as memory doesn't crash).
-        # # res = main([0], 0, torch.device('cuda'))
-        # with mp.Pool(processes=num_processes) as pool:
-        #     # Use starmap_async and capture the result object
-        #     async_results = pool.starmap_async(main, groups)
-        #
-        #     # Call .get() to ensure the main process waits for all async processes to finish
-        #     async_results.get()
         for group in groups:
             main(*group)
     else:
         print(SLURM_CTX, flush=True)
-
-        # N_FILES_TOTAL = 9
-        # single_node_width = 1
         uid = int(SLURM_CTX["task_id"])
-        print(uid)
         if args.multi_subject:
-            assert uid == 0
-            # all_idcs = [[2,5,11,19,23,27,30,34,38,41,50,53,57,60,64,70,72,80,85,96]]  # 8, 15, 45, 76, 90 | 20 subject model
-            # all_idcs = [[x for x in range(0, 98, 2)]]  # | 50 subject model
-            # all_idcs = [
-            #     [x for x in range(99) if x not in [1, 3, 12, 25, 14, 16, 35, 38, 41, 43, 47, 50, 51, 60, 61, 65, 66, 73, 72, 78, 76, 85, 86, 89, 95]]
-            # ]  # | 74 subject model
+            assert uid == 0, "Multi-subject only supports single task (uid=0)"
             all_idcs = [[x for x in range(99)]]  # | 99 session model
             print("Generating multisubject model with idcs: ", all_idcs)
             data_idcs = all_idcs[uid]
         else:
             all_idcs = [[x] for x in range(99)]  # [30, 40, 50, 62, 64, 70, 94, 95, 96]]
             data_idcs = all_idcs[uid * 10 : (uid + 1) * 10]  # all_idcs[uid]
-
-            # data_idcs = [[30]]
 
         print(f"Data indices: {data_idcs}", flush=True)
         print(f"UID: {uid}", flush=True)
@@ -541,4 +478,3 @@ if __name__ == "__main__":
 
         for di in data_idcs:
             main(di, uid, args.config, device)
-        # multi_setting_manager(data_idcs, uid, device)

@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / compiled files
 __pycache__/
+**/__pycache__/*
 *.py[cod]
 *$py.class
 
@@ -46,3 +47,10 @@ htmlcov/
 *.log
 *.sqlite3
 *.db
+
+
+# codebase-specific ignores
+trained_models/
+wandb/
+slurm_logs/
+vis_logs/
